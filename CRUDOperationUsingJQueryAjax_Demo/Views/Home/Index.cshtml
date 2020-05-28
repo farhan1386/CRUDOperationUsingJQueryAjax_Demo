@@ -1,0 +1,152 @@
+﻿@model CRUDOperationUsingJQueryAjax_Demo.ViewModel.StudentViewModel
+
+@{
+    ViewBag.Title = "Home";
+}
+
+<div class="container">
+    <a href="#" class="btn btn-primary rounded-0 mb-2" onclick="AddNewStudent(0)"><i class="fas fa-plus-circle"></i> Add New</a>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Action(s)</th>
+            </tr>
+        </thead>
+        <tbody id="SetStudentList">
+            <tr id="LoadingStatus" style="color:red"></tr>
+        </tbody>
+    </table>
+
+    @*Create A Popup Modal With Registration Form For Add Or Edit Student Record*@
+    <div class="modal" id="MyModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title"></h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="form">
+                        <fieldset id="SubmitForm">
+                            @Html.HiddenFor(m => m.StudentId, new { @id = "StuId" })
+                            <div class="form-group">
+                                @Html.TextBoxFor(m => m.StudentName, new { @id = "StuName", @class = "form-control", @placeholder = "Name*" })
+                            </div>
+                            <div class="form-group">
+                                @Html.TextBoxFor(m => m.Email, new { @id = "Email", @class = "form-control", @placeholder = "Email*" })
+                            </div>
+                            <div class="form-group">
+                                @Html.DropDownListFor(m => m.DepartmentId, ViewBag.ListOfDepartment as SelectList, "-----Choose Department-----", new { @id = "DropDwn", @class = "form-control" })
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-primary rounded-0" id="SaveStudentRecord">Submit</a>
+                    <button type="button" class="btn btn-danger rounded-0" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @*Create A PopUp Modal For DeleteConfirmation*@
+    <div class="modal" id="DeleteConfirmation">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title"></h4>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <h5>Are You Sure? You Want To Delete This Record.</h5>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger rounded-0" data-dismiss="modal" id="r">Cancle</a>
+                    <a href="#" class="btn btn-success rounded-0" onclick="ConfirmDelete()">Confirm</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section scripts{
+    <script type="text/javascript">
+        $("#LoadingStatus").html("Loading....");
+        $.get("/Home/GetStudentList", null, DataBind);
+        function DataBind(StudentList) {
+            var SetData = $("#SetStudentList");
+            for (var i = 0; i < StudentList.length; i++) {
+                var Data = "<tr class='row_" + StudentList[i].StudentId + "'>" +
+                    "<td>" + StudentList[i].StudentId + "</td>" +
+                    "<td>" + StudentList[i].StudentName + "</td>" +
+                    "<td>" + StudentList[i].Email + "</td>" +
+                    "<td>" + StudentList[i].DepartmentName + "</td>" +
+                    "<td>" + "<a href='#' class='btn btn-sm btn-info rounded-0' onclick='EditStudentRecord(" + StudentList[i].StudentId + ")' ><i class='fas fa-edit'></i></a>" + "<a href='#' class='btn btn-sm btn-danger rounded-0' onclick='DeleteStudentRecord(" + StudentList[i].StudentId + ")'> <i class='fas fa-trash'></i></a>" + "</td>" +
+                    "</tr>";
+                SetData.append(Data);
+                $("#LoadingStatus").html(" ");
+            }
+        }
+
+        //Show The Popup Modal For Add New Student
+        function AddNewStudent(StudentId) {
+            $("#form")[0].reset();
+            $("#StuId").val(0);
+            $("#DropDwn option:selected").text("---Choose Department---");
+            $("#ModalTitle").html("Add New Student");
+            $("#MyModal").modal();
+        }
+
+        //Show The Popup Modal For Edit Student Record
+        function EditStudentRecord(StudentId) {
+            var url = "/Home/GetStudentById?StudentId=" + StudentId;
+            $("#ModalTitle").html("Update Student Record");
+            $("#MyModal").modal();
+            $.ajax({
+                type: "GET",
+                url: url,
+                success: function (data) {
+                    var obj = JSON.parse(data);
+                    $("#StuId").val(obj.StudentId);
+                    $("#StuName").val(obj.StudentName);
+                    $("#Email").val(obj.Email);
+                    $("#DropDwn option:selected").text(obj.tblDepartment.DepartmentName);
+                    $("#DropDwn option:selected").val(obj.DepartmentId);
+                }
+            })
+        }
+        $("#SaveStudentRecord").click(function () {
+            var data = $("#SubmitForm").serialize();
+            $.ajax({
+                type: "Post",
+                url: "/Home/SaveDataInDatabase",
+                data: data,
+                success: function (result) {
+                    alert("Success!..");
+                    window.location.href = "/Home/index";
+                    $("#MyModal").modal("hide");
+                }
+            })
+        })
+
+        //Show The Popup Modal For DeleteComfirmation
+        var DeleteStudentRecord = function (StudentId) {
+            $("#StuId").val(StudentId);
+            $("#DeleteConfirmation").modal("show");
+        }
+        var ConfirmDelete = function () {
+            var StuId = $("#StuId").val();
+            $.ajax({
+                type: "POST",
+                url: "/Home/DeleteStudentRecord?StudentId=" + StuId,
+                success: function (result) {
+                    $("#DeleteConfirmation").modal("hide");
+                    $(".row_" + StuId).remove();
+                }
+            })
+        }
+    </script>
+}
